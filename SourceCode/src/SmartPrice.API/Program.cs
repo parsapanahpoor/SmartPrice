@@ -1,7 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using SmartPrice.Application.Interfaces;
+using SmartPrice.Domain.Entities;
+using SmartPrice.Infrastructure.BackgroundServices;
 using SmartPrice.Infrastructure.Data;
+using SmartPrice.Infrastructure.Jobs;
 using SmartPrice.Infrastructure.Repositories;
 using SmartPrice.Infrastructure.Scraping;
 using SmartPrice.Infrastructure.Scraping.Scrapers;
@@ -49,6 +52,9 @@ try
 
     // Repository Registration
     builder.Services.AddScoped<IProductRepository, ProductRepository>();
+    
+    // Generic Repository
+    builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 
     // Scraper Configuration
     builder.Services.Configure<ScraperOptions>(builder.Configuration.GetSection("Scraper"));
@@ -70,6 +76,14 @@ try
     // Marketplace Scrapers
     builder.Services.AddScoped<IMarketplaceScraper, DigikalaScraper>();
     // Add more scrapers here: Torob, Snapfood, Emalls, etc.
+
+    // Job Services
+    builder.Services.AddScoped<IJobScheduler, JobScheduler>();
+    builder.Services.AddScoped<IScrapingQueueService, ScrapingQueueService>();
+    builder.Services.AddScoped<IJobExecutor, JobExecutor>();
+
+    // Background Service
+    builder.Services.AddHostedService<ScraperBackgroundService>();
 
     // API Services
     builder.Services.AddControllers();

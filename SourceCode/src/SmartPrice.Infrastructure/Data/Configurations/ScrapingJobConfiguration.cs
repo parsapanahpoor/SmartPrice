@@ -11,7 +11,13 @@ public class ScrapingJobConfiguration : IEntityTypeConfiguration<ScrapingJob>
 {
     public void Configure(EntityTypeBuilder<ScrapingJob> builder)
     {
+        builder.ToTable("ScrapingJobs");
+
         builder.HasKey(sj => sj.Id);
+
+        builder.Property(sj => sj.Name)
+            .IsRequired()
+            .HasMaxLength(200);
 
         builder.Property(sj => sj.TargetUrl)
             .IsRequired()
@@ -30,6 +36,40 @@ public class ScrapingJobConfiguration : IEntityTypeConfiguration<ScrapingJob>
             .IsRequired()
             .HasDefaultValue(0);
 
+        // Scheduling properties
+        builder.Property(sj => sj.Frequency)
+            .IsRequired()
+            .HasConversion<int>()
+            .HasDefaultValue(0);
+
+        builder.Property(sj => sj.Priority)
+            .IsRequired()
+            .HasConversion<int>()
+            .HasDefaultValue(1); // Normal priority
+
+        builder.Property(sj => sj.CronExpression)
+            .HasMaxLength(100);
+
+        builder.Property(sj => sj.RunCount)
+            .IsRequired()
+            .HasDefaultValue(0);
+
+        builder.Property(sj => sj.SuccessCount)
+            .IsRequired()
+            .HasDefaultValue(0);
+
+        builder.Property(sj => sj.FailureCount)
+            .IsRequired()
+            .HasDefaultValue(0);
+
+        builder.Property(sj => sj.IsActive)
+            .IsRequired()
+            .HasDefaultValue(true);
+
+        builder.Property(sj => sj.MaxRetries)
+            .IsRequired()
+            .HasDefaultValue(3);
+
         builder.Property(sj => sj.StartedAt)
             .IsRequired();
 
@@ -39,8 +79,19 @@ public class ScrapingJobConfiguration : IEntityTypeConfiguration<ScrapingJob>
         builder.Property(sj => sj.ErrorMessage)
             .HasMaxLength(2000);
 
+        builder.Property(sj => sj.CreatedAt)
+            .IsRequired()
+            .HasDefaultValueSql("NOW()");
+
+        builder.Property(sj => sj.UpdatedAt)
+            .IsRequired()
+            .HasDefaultValueSql("NOW()");
+
+        // Indexes
         builder.HasIndex(sj => sj.StartedAt);
         builder.HasIndex(sj => sj.Status);
         builder.HasIndex(sj => sj.Marketplace);
+        builder.HasIndex(sj => new { sj.IsActive, sj.NextRunAt })
+            .HasDatabaseName("IX_ScrapingJobs_IsActive_NextRunAt");
     }
 }
