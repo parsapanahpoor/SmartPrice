@@ -23,6 +23,16 @@ public class ScrapingJob
     public JobStatus Status { get; set; }
 
     /// <summary>
+    /// Type of marketplace being scraped
+    /// </summary>
+    public MarketplaceType Marketplace { get; set; }
+
+    /// <summary>
+    /// Number of retry attempts made
+    /// </summary>
+    public int RetryCount { get; set; }
+
+    /// <summary>
     /// When the job started
     /// </summary>
     public DateTime StartedAt { get; set; }
@@ -31,6 +41,11 @@ public class ScrapingJob
     /// When the job completed (null if still running or failed)
     /// </summary>
     public DateTime? CompletedAt { get; set; }
+
+    /// <summary>
+    /// Duration of the scraping job
+    /// </summary>
+    public TimeSpan? Duration { get; set; }
 
     /// <summary>
     /// Number of products successfully scraped

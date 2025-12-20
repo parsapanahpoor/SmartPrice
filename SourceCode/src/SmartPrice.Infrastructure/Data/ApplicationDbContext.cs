@@ -33,6 +33,11 @@ public class ApplicationDbContext : DbContext
     /// </summary>
     public DbSet<ScrapingJob> ScrapingJobs { get; set; } = null!;
 
+    /// <summary>
+    /// Proxy servers table
+    /// </summary>
+    public DbSet<ProxyServer> ProxyServers { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

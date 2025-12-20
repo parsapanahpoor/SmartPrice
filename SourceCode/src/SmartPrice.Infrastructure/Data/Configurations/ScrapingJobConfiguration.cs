@@ -21,6 +21,15 @@ public class ScrapingJobConfiguration : IEntityTypeConfiguration<ScrapingJob>
             .IsRequired()
             .HasConversion<string>();
 
+        builder.Property(sj => sj.Marketplace)
+            .IsRequired()
+            .HasConversion<int>()
+            .HasDefaultValue(0);
+
+        builder.Property(sj => sj.RetryCount)
+            .IsRequired()
+            .HasDefaultValue(0);
+
         builder.Property(sj => sj.StartedAt)
             .IsRequired();
 
@@ -32,5 +41,6 @@ public class ScrapingJobConfiguration : IEntityTypeConfiguration<ScrapingJob>
 
         builder.HasIndex(sj => sj.StartedAt);
         builder.HasIndex(sj => sj.Status);
+        builder.HasIndex(sj => sj.Marketplace);
     }
 }

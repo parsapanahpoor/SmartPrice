@@ -3,6 +3,8 @@ using Serilog;
 using SmartPrice.Application.Interfaces;
 using SmartPrice.Infrastructure.Data;
 using SmartPrice.Infrastructure.Repositories;
+using SmartPrice.Infrastructure.Scraping;
+using SmartPrice.Infrastructure.Scraping.Scrapers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -47,6 +49,27 @@ try
 
     // Repository Registration
     builder.Services.AddScoped<IProductRepository, ProductRepository>();
+
+    // Scraper Configuration
+    builder.Services.Configure<ScraperOptions>(builder.Configuration.GetSection("Scraper"));
+
+    // HttpClient for Scraping
+    builder.Services.AddHttpClient("ScraperClient")
+        .ConfigureHttpClient(client =>
+        {
+            client.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+            client.DefaultRequestHeaders.Add("Accept-Language", "fa-IR,fa;q=0.9,en-US;q=0.8,en;q=0.7");
+            client.DefaultRequestHeaders.Add("Cache-Control", "no-cache");
+        })
+        .SetHandlerLifetime(TimeSpan.FromMinutes(5));
+
+    // Scraper Services
+    builder.Services.AddSingleton<IProxyManager, ProxyManager>();
+    builder.Services.AddScoped<IScraperService, ScraperService>();
+    
+    // Marketplace Scrapers
+    builder.Services.AddScoped<IMarketplaceScraper, DigikalaScraper>();
+    // Add more scrapers here: Torob, Snapfood, Emalls, etc.
 
     // API Services
     builder.Services.AddControllers();
