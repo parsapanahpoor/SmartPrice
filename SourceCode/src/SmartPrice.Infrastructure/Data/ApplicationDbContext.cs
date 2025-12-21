@@ -43,6 +43,21 @@ public class ApplicationDbContext : DbContext
     /// </summary>
     public DbSet<ScrapingQueue> ScrapingQueues { get; set; } = null!;
 
+    /// <summary>
+    /// Telegram users table
+    /// </summary>
+    public DbSet<TelegramUser> TelegramUsers { get; set; } = null!;
+
+    /// <summary>
+    /// User product tracking table
+    /// </summary>
+    public DbSet<UserProductTracking> UserProductTrackings { get; set; } = null!;
+
+    /// <summary>
+    /// Notification logs table
+    /// </summary>
+    public DbSet<NotificationLog> NotificationLogs { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

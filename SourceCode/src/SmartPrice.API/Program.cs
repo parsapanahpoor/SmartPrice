@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using SmartPrice.Application.Interfaces;
+using SmartPrice.Application.Interfaces.Telegram;
 using SmartPrice.Domain.Entities;
 using SmartPrice.Infrastructure.BackgroundServices;
 using SmartPrice.Infrastructure.Data;
@@ -8,6 +9,9 @@ using SmartPrice.Infrastructure.Jobs;
 using SmartPrice.Infrastructure.Repositories;
 using SmartPrice.Infrastructure.Scraping;
 using SmartPrice.Infrastructure.Scraping.Scrapers;
+using SmartPrice.Infrastructure.Services.Telegram;
+using Interfaces = SmartPrice.Application.Interfaces;
+using Services = SmartPrice.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -82,8 +86,16 @@ try
     builder.Services.AddScoped<IScrapingQueueService, ScrapingQueueService>();
     builder.Services.AddScoped<IJobExecutor, JobExecutor>();
 
-    // Background Service
+    // Telegram Bot Services
+    builder.Services.AddSingleton<ITelegramBotService, TelegramBotService>();
+    builder.Services.AddScoped<ICommandHandler, CommandHandler>();
+    builder.Services.AddScoped<Interfaces.Telegram.IUserService, Services.Telegram.UserService>();
+    builder.Services.AddScoped<ITrackingService, TrackingService>();
+    builder.Services.AddScoped<INotificationService, NotificationService>();
+
+    // Background Services
     builder.Services.AddHostedService<ScraperBackgroundService>();
+    builder.Services.AddHostedService<TelegramBotBackgroundService>();
 
     // API Services
     builder.Services.AddControllers();
