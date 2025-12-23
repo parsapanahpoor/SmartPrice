@@ -29,8 +29,7 @@ public class ScrapingJobConfiguration : IEntityTypeConfiguration<ScrapingJob>
 
         builder.Property(sj => sj.Marketplace)
             .IsRequired()
-            .HasConversion<int>()
-            .HasDefaultValue(0);
+            .HasConversion<int>();
 
         builder.Property(sj => sj.RetryCount)
             .IsRequired()
@@ -39,13 +38,11 @@ public class ScrapingJobConfiguration : IEntityTypeConfiguration<ScrapingJob>
         // Scheduling properties
         builder.Property(sj => sj.Frequency)
             .IsRequired()
-            .HasConversion<int>()
-            .HasDefaultValue(0);
+            .HasConversion<int>();
 
         builder.Property(sj => sj.Priority)
             .IsRequired()
-            .HasConversion<int>()
-            .HasDefaultValue(1); // Normal priority
+            .HasConversion<int>();
 
         builder.Property(sj => sj.CronExpression)
             .HasMaxLength(100);

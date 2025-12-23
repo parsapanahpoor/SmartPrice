@@ -1,0 +1,86 @@
+# Git
+.git
+.gitignore
+.gitattributes
+.github
+
+# IDEs
+.vs
+.vscode
+*.swp
+*.swo
+*~
+.DS_Store
+.idea
+*.sln.iml
+*.user
+.ntvs_analysis_dat
+
+# Build Results
+bin/
+obj/
+out/
+*.exe
+*.dll
+*.so
+*.dylib
+*.pdb
+*.dll.config
+
+# Test Results
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+
+# NuGet
+packages/
+*.nupkg
+.nuget/
+
+# Rider
+.idea/
+.rider/
+*.iml
+
+# MacOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Environment
+.env
+.env.local
+.env.*.local
+.venv
+env/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# Node (if any frontend)
+node_modules/
+dist/
+
+# Docker
+.dockerignore
+Dockerfile*
+
+# Documentation
+*.md
+docs/
+
+# IDE cache files
+.vscode/
+.vs/
+.idea/
+*.swp
+*.swo
+
+# Miscellaneous
+.DS_Store
+Thumbs.db
+.editorconfig

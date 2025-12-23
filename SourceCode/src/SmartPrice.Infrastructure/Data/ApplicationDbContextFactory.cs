@@ -13,10 +13,9 @@ public class ApplicationDbContextFactory : IDesignTimeDbContextFactory<Applicati
     {
         var optionsBuilder = new DbContextOptionsBuilder<ApplicationDbContext>();
         
-        // Use a default connection string for migrations
-        // This will be overridden at runtime by the actual configuration
+        // Connection string for design-time migrations
         optionsBuilder.UseNpgsql(
-            "Host=localhost;Database=smartprice;Username=postgres;Password=your_password",
+            "Host=localhost;Port=5433;Database=smartprice;Username=postgres;Password=postgres123",
             b => b.MigrationsAssembly("SmartPrice.Infrastructure")
         );
 

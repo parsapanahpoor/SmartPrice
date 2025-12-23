@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16
+    container_name: smartprice-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin123
+      POSTGRES_DB: smartprice
+      POSTGRES_INITDB_ARGS: "-c shared_preload_libraries=pg_stat_statements"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+    networks:
+      - smartprice-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d smartprice"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: smartprice-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - smartprice-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    command: redis-server --appendonly yes
+
+  # SmartPrice API
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: smartprice-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+      ConnectionStrings__DefaultConnection: "Host=postgres;Database=smartprice;Username=postgres;Password=admin123"
+      Redis__ConnectionString: "redis:6379"
+      Serilog__MinimumLevel__Default: "Information"
+    ports:
+      - "5000:5000"
+      - "5001:5001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - smartprice-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  # Seq (Logging)
+  seq:
+    image: datalust/seq
+    container_name: smartprice-seq
+    environment:
+      ACCEPT_EULA: Y
+    ports:
+      - "5341:80"
+    volumes:
+      - seq_data:/data
+    networks:
+      - smartprice-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  seq_data:
+    driver: local
+
+networks:
+  smartprice-network:
+    driver: bridge

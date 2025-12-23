@@ -58,6 +58,21 @@ public class ApplicationDbContext : DbContext
     /// </summary>
     public DbSet<NotificationLog> NotificationLogs { get; set; } = null!;
 
+    /// <summary>
+    /// Admin users table
+    /// </summary>
+    public DbSet<AdminUser> AdminUsers { get; set; } = null!;
+
+    /// <summary>
+    /// Audit logs table
+    /// </summary>
+    public DbSet<AuditLog> AuditLogs { get; set; } = null!;
+
+    /// <summary>
+    /// System metrics table
+    /// </summary>
+    public DbSet<SystemMetric> SystemMetrics { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

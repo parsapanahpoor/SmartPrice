@@ -1,0 +1,30 @@
+# Dockerfile for Development
+FROM mcr.microsoft.com/dotnet/sdk:7.0 AS development
+
+WORKDIR /src
+
+# Copy solution and project files
+COPY ["SourceCode/src/SmartPrice.Domain/SmartPrice.Domain.csproj", "SourceCode/src/SmartPrice.Domain/"]
+COPY ["SourceCode/src/SmartPrice.Application/SmartPrice.Application.csproj", "SourceCode/src/SmartPrice.Application/"]
+COPY ["SourceCode/src/SmartPrice.Infrastructure/SmartPrice.Infrastructure.csproj", "SourceCode/src/SmartPrice.Infrastructure/"]
+COPY ["SourceCode/src/SmartPrice.API/SmartPrice.API.csproj", "SourceCode/src/SmartPrice.API/"]
+
+# Restore dependencies
+RUN dotnet restore "SourceCode/src/SmartPrice.API/SmartPrice.API.csproj"
+
+# Copy all source code
+COPY SourceCode .
+
+# Install dotnet tools
+RUN dotnet tool install --global dotnet-ef
+
+# Set PATH
+ENV PATH="${PATH}:/root/.dotnet/tools"
+
+# Expose ports
+EXPOSE 5000 5001
+
+# Development entry point
+WORKDIR "/src/src/SmartPrice.API"
+
+CMD ["dotnet", "run", "--no-build"]

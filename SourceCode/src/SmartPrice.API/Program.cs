@@ -1,26 +1,20 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 using Serilog;
-using SmartPrice.Application.Interfaces;
-using SmartPrice.Application.Interfaces.Telegram;
-using SmartPrice.Domain.Entities;
-using SmartPrice.Infrastructure.BackgroundServices;
 using SmartPrice.Infrastructure.Data;
-using SmartPrice.Infrastructure.Jobs;
+using SmartPrice.Application.Interfaces;
+using SmartPrice.Infrastructure.Services;
 using SmartPrice.Infrastructure.Repositories;
-using SmartPrice.Infrastructure.Scraping;
-using SmartPrice.Infrastructure.Scraping.Scrapers;
-using SmartPrice.Infrastructure.Services.Telegram;
-using Interfaces = SmartPrice.Application.Interfaces;
-using Services = SmartPrice.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Serilog Configuration
 Log.Logger = new LoggerConfiguration()
-    .ReadFrom.Configuration(builder.Configuration)
-    .Enrich.FromLogContext()
+    .MinimumLevel.Information()
     .WriteTo.Console()
-    .WriteTo.Seq("http://localhost:5341")
+    .WriteTo.File("logs/smartprice-.txt", rollingInterval: RollingInterval.Day)
     .CreateLogger();
 
 builder.Host.UseSerilog();
@@ -36,66 +30,39 @@ try
             b => b.MigrationsAssembly("SmartPrice.Infrastructure")
         ));
 
-    // Redis Cache Configuration
-    builder.Services.AddStackExchangeRedisCache(options =>
+    // JWT Configuration
+    var jwtSecretKey = builder.Configuration["Jwt:SecretKey"] ?? 
+        "DefaultSecretKeyForDevelopmentOnlyChangeInProduction123!";
+
+    builder.Services.AddAuthentication(options =>
     {
-        options.Configuration = builder.Configuration["Redis:ConnectionString"];
-        options.InstanceName = "SmartPrice_";
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "SmartPrice",
+            ValidAudience = builder.Configuration["Jwt:Audience"] ?? "SmartPriceUsers",
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey)),
+            ClockSkew = TimeSpan.Zero
+        };
     });
 
-    // Health Checks
-    builder.Services.AddHealthChecks()
-        .AddNpgSql(
-            builder.Configuration.GetConnectionString("DefaultConnection")!,
-            name: "postgresql",
-            tags: new[] { "db", "sql", "postgresql" })
-        .AddRedis(
-            builder.Configuration["Redis:ConnectionString"]!,
-            name: "redis",
-            tags: new[] { "cache", "redis" });
+    builder.Services.AddAuthorization();
 
     // Repository Registration
     builder.Services.AddScoped<IProductRepository, ProductRepository>();
-    
-    // Generic Repository
-    builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 
-    // Scraper Configuration
-    builder.Services.Configure<ScraperOptions>(builder.Configuration.GetSection("Scraper"));
-
-    // HttpClient for Scraping
-    builder.Services.AddHttpClient("ScraperClient")
-        .ConfigureHttpClient(client =>
-        {
-            client.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
-            client.DefaultRequestHeaders.Add("Accept-Language", "fa-IR,fa;q=0.9,en-US;q=0.8,en;q=0.7");
-            client.DefaultRequestHeaders.Add("Cache-Control", "no-cache");
-        })
-        .SetHandlerLifetime(TimeSpan.FromMinutes(5));
-
-    // Scraper Services
-    builder.Services.AddSingleton<IProxyManager, ProxyManager>();
-    builder.Services.AddScoped<IScraperService, ScraperService>();
-    
-    // Marketplace Scrapers
-    builder.Services.AddScoped<IMarketplaceScraper, DigikalaScraper>();
-    // Add more scrapers here: Torob, Snapfood, Emalls, etc.
-
-    // Job Services
-    builder.Services.AddScoped<IJobScheduler, JobScheduler>();
-    builder.Services.AddScoped<IScrapingQueueService, ScrapingQueueService>();
-    builder.Services.AddScoped<IJobExecutor, JobExecutor>();
-
-    // Telegram Bot Services
-    builder.Services.AddSingleton<ITelegramBotService, TelegramBotService>();
-    builder.Services.AddScoped<ICommandHandler, CommandHandler>();
-    builder.Services.AddScoped<Interfaces.Telegram.IUserService, Services.Telegram.UserService>();
-    builder.Services.AddScoped<ITrackingService, TrackingService>();
-    builder.Services.AddScoped<INotificationService, NotificationService>();
-
-    // Background Services
-    builder.Services.AddHostedService<ScraperBackgroundService>();
-    builder.Services.AddHostedService<TelegramBotBackgroundService>();
+    // Auth & Admin Services
+    builder.Services.AddScoped<IAuthService, AuthService>();
+    builder.Services.AddScoped<IAdminService, AdminService>();
+    builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
 
     // API Services
     builder.Services.AddControllers();
@@ -105,21 +72,35 @@ try
         c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
         {
             Title = "SmartPrice API",
-            Version = "v1",
-            Description = "A professional price tracking and comparison API for Iranian markets",
-            Contact = new Microsoft.OpenApi.Models.OpenApiContact
-            {
-                Name = "SmartPrice Team",
-                Email = "support@smartprice.ir"
-            }
+            Version = "v1.0",
+            Description = "Price tracking and comparison API for Iranian markets"
         });
 
-        var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
-        var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-        if (File.Exists(xmlPath))
+        // Add JWT to Swagger
+        c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
         {
-            c.IncludeXmlComments(xmlPath);
-        }
+            Name = "Authorization",
+            Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+            Scheme = "Bearer",
+            BearerFormat = "JWT",
+            In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+            Description = "JWT Authorization header using the Bearer scheme. Example: 'Bearer {token}'"
+        });
+
+        c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+        {
+            {
+                new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+                {
+                    Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                    {
+                        Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                        Id = "Bearer"
+                    }
+                },
+                Array.Empty<string>()
+            }
+        });
     });
 
     // CORS
@@ -136,30 +117,23 @@ try
     var app = builder.Build();
 
     // Middleware Pipeline
+    app.UseSerilogRequestLogging();
+
     if (app.Environment.IsDevelopment())
     {
         app.UseSwagger();
         app.UseSwaggerUI(c =>
         {
             c.SwaggerEndpoint("/swagger/v1/swagger.json", "SmartPrice API V1");
-            c.RoutePrefix = string.Empty;
+            c.RoutePrefix = string.Empty; // Swagger at root
         });
     }
 
-    app.UseSerilogRequestLogging();
-
     app.UseHttpsRedirection();
-
     app.UseCors("AllowAll");
-
+    app.UseAuthentication();
     app.UseAuthorization();
-
     app.MapControllers();
-
-    app.MapHealthChecks("/health");
-
-    app.MapGet("/", () => Results.Redirect("/swagger"))
-        .ExcludeFromDescription();
 
     Log.Information("SmartPrice API started successfully");
 
